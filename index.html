@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=5" />
+  <link rel="stylesheet" href="styles.css?v=6" />
 </head>
 <body>
   <header class="topbar">
@@ -16,112 +16,238 @@
       <img src="logo.png?v=1" alt="" class="brand-logo" />
       <div class="brand-text">
         <h1>Linda's Nail Studio</h1>
-        <span class="brand-sub">Panel de propietaria</span>
+        <span class="brand-sub" data-i18n="brandSub">Panel de propietaria</span>
       </div>
     </div>
-    <button id="logoutBtn" class="ghost hidden">Cerrar sesión</button>
+    <div class="topbar-actions">
+      <div class="lang-toggle hidden" id="langToggle">
+        <button class="lang-opt active" data-lang="es">ES</button>
+        <button class="lang-opt" data-lang="en">EN</button>
+      </div>
+      <button id="logoutBtn" class="ghost hidden" data-i18n="logout">Cerrar sesión</button>
+    </div>
   </header>
 
   <main id="app">
     <!-- Login / sign up -->
     <section id="authView" class="card auth-card hidden">
       <div class="tabs">
-        <button id="tabLogin" class="tab active">Iniciar sesión</button>
-        <button id="tabSignup" class="tab">Crear cuenta</button>
+        <button id="tabLogin" class="tab active" data-i18n="tabLogin">Iniciar sesión</button>
+        <button id="tabSignup" class="tab" data-i18n="tabSignup">Crear cuenta</button>
       </div>
 
       <form id="loginForm">
-        <label>Correo<input type="email" id="loginEmail" required autocomplete="email" /></label>
-        <label>Contraseña<input type="password" id="loginPassword" required autocomplete="current-password" /></label>
-        <button type="submit">Entrar</button>
+        <label><span data-i18n="emailLabel">Correo</span><input type="email" id="loginEmail" required autocomplete="email" /></label>
+        <label><span data-i18n="passwordLabel">Contraseña</span><input type="password" id="loginPassword" required autocomplete="current-password" /></label>
+        <button type="submit" data-i18n="enterBtn">Entrar</button>
         <p id="loginError" class="error hidden"></p>
       </form>
 
       <form id="signupForm" class="hidden">
-        <label>Tu nombre<input type="text" id="signupName" required /></label>
-        <label>Tu teléfono<input type="tel" id="signupPhone" required /></label>
-        <label>Correo<input type="email" id="signupEmail" required autocomplete="email" /></label>
-        <label>Contraseña<input type="password" id="signupPassword" required autocomplete="new-password" minlength="6" /></label>
-        <button type="submit">Crear cuenta</button>
+        <label><span data-i18n="nameLabel">Tu nombre</span><input type="text" id="signupName" required /></label>
+        <label><span data-i18n="phoneLabel">Tu teléfono</span><input type="tel" id="signupPhone" required /></label>
+        <label><span data-i18n="emailLabel">Correo</span><input type="email" id="signupEmail" required autocomplete="email" /></label>
+        <label><span data-i18n="passwordLabel">Contraseña</span><input type="password" id="signupPassword" required autocomplete="new-password" minlength="6" /></label>
+        <button type="submit" data-i18n="tabSignup">Crear cuenta</button>
         <p id="signupError" class="error hidden"></p>
       </form>
     </section>
 
     <!-- Shown once logged in but not yet flagged as the owner -->
     <section id="claimView" class="card hidden">
-      <h2>Acceso de propietaria</h2>
-      <p>Esta cuenta todavía no tiene acceso de propietaria. Ingresa el código de configuración
+      <h2 data-i18n="claimTitle">Acceso de propietaria</h2>
+      <p data-i18n="claimBody">Esta cuenta todavía no tiene acceso de propietaria. Ingresa el código de configuración
         (te lo dio quien instaló este panel) para activarlo una sola vez.</p>
       <form id="claimForm">
-        <label>Código<input type="text" id="claimCode" required autocomplete="off" /></label>
-        <button type="submit">Activar acceso</button>
+        <label><span data-i18n="codeLabel">Código</span><input type="text" id="claimCode" required autocomplete="off" /></label>
+        <button type="submit" data-i18n="claimBtn">Activar acceso</button>
         <p id="claimError" class="error hidden"></p>
       </form>
     </section>
 
     <!-- Main dashboard, shown once is_owner is confirmed -->
     <section id="dashView" class="hidden">
-      <div class="stats-row" id="statsRow">
-        <div class="stat-tile">
-          <span class="stat-value" id="statToday">–</span>
-          <span class="stat-label">Citas hoy</span>
+      <div class="dtabs-nav" id="dashTabs">
+        <button class="dtab active" data-tab="overview" data-i18n="tabOverview">Resumen</button>
+        <button class="dtab" data-tab="discounts" data-i18n="tabDiscounts">Descuentos</button>
+        <button class="dtab" data-tab="messages" data-i18n="tabMessages">Mensajes</button>
+      </div>
+
+      <!-- ===== Overview ===== -->
+      <div id="tabOverview" class="tab-panel">
+        <div class="stats-row" id="statsRow">
+          <div class="stat-tile">
+            <span class="stat-value" id="statToday">–</span>
+            <span class="stat-label" data-i18n="statToday">Citas hoy</span>
+          </div>
+          <div class="stat-tile">
+            <span class="stat-value" id="statWeek">–</span>
+            <span class="stat-label" data-i18n="statWeek">Esta semana</span>
+          </div>
+          <div class="stat-tile">
+            <span class="stat-value" id="statRevenue">–</span>
+            <span class="stat-label" data-i18n="statRevenue">Ingresos del mes</span>
+          </div>
+          <div class="stat-tile">
+            <span class="stat-value" id="statCustomers">–</span>
+            <span class="stat-label" data-i18n="statCustomers">Clientas</span>
+          </div>
         </div>
-        <div class="stat-tile">
-          <span class="stat-value" id="statWeek">–</span>
-          <span class="stat-label">Esta semana</span>
+
+        <div class="charts-row">
+          <div class="chart-card">
+            <h3 data-i18n="chartApptsTitle">Citas — últimos 14 días</h3>
+            <div id="apptsChart" class="chart-svg-wrap"></div>
+          </div>
+          <div class="chart-card">
+            <h3 data-i18n="chartServicesTitle">Servicios más solicitados</h3>
+            <div id="servicesChart" class="rank-chart"></div>
+          </div>
         </div>
-        <div class="stat-tile">
-          <span class="stat-value" id="statRevenue">–</span>
-          <span class="stat-label">Ingresos del mes</span>
-        </div>
-        <div class="stat-tile">
-          <span class="stat-value" id="statCustomers">–</span>
-          <span class="stat-label">Clientas</span>
+
+        <div class="dash-layout">
+          <aside class="sidebar">
+            <div class="calendar-card">
+              <div class="cal-header">
+                <button id="calPrev" class="icon-btn" aria-label="Previous month">‹</button>
+                <span id="calMonthLabel" class="cal-month-label"></span>
+                <button id="calNext" class="icon-btn" aria-label="Next month">›</button>
+              </div>
+              <div class="cal-grid" id="calGrid"></div>
+              <button id="calTodayBtn" class="ghost small cal-today-btn" data-i18n="today">Hoy</button>
+            </div>
+          </aside>
+
+          <div class="main-col">
+            <div class="toolbar">
+              <input type="search" id="searchInput" class="search-input" data-i18n-placeholder="searchPlaceholder" placeholder="Buscar por nombre o teléfono…" />
+              <div class="filters" id="statusFilters">
+                <button class="filter active" data-status="upcoming" data-i18n="filterUpcoming">Próximas</button>
+                <button class="filter" data-status="done" data-i18n="filterDone">Completadas</button>
+                <button class="filter" data-status="cancelled" data-i18n="filterCancelled">Canceladas</button>
+                <button class="filter" data-status="all" data-i18n="filterAll">Todas</button>
+              </div>
+              <button id="refreshBtn" class="ghost" data-i18n="refresh">Actualizar</button>
+            </div>
+
+            <div id="selectedDateBanner" class="selected-date-banner hidden">
+              <span id="selectedDateText"></span>
+              <button id="clearDateBtn" class="ghost small" data-i18n="viewAll">Ver todas</button>
+            </div>
+
+            <p id="dashError" class="error hidden"></p>
+            <p id="loadingMsg" class="muted hidden" data-i18n="loading">Cargando…</p>
+            <p id="emptyMsg" class="muted hidden" data-i18n="noApptsInView">No hay citas en esta vista.</p>
+
+            <div id="apptList"></div>
+          </div>
         </div>
       </div>
 
-      <div class="dash-layout">
-        <aside class="sidebar">
-          <div class="calendar-card">
-            <div class="cal-header">
-              <button id="calPrev" class="icon-btn" aria-label="Mes anterior">‹</button>
-              <span id="calMonthLabel" class="cal-month-label"></span>
-              <button id="calNext" class="icon-btn" aria-label="Mes siguiente">›</button>
+      <!-- ===== Discounts ===== -->
+      <div id="tabDiscounts" class="tab-panel hidden">
+        <div class="panel-head">
+          <div>
+            <h2 data-i18n="discountsHeading">Descuentos</h2>
+            <p class="panel-sub" data-i18n="discountsHeadingSub">Códigos activos en la app ahora mismo.</p>
+          </div>
+          <button id="newDiscountBtn" data-i18n="newDiscount">+ Nuevo descuento</button>
+        </div>
+        <p id="discountsError" class="error hidden"></p>
+        <div id="discountsList" class="discounts-grid"></div>
+      </div>
+
+      <!-- ===== Messages (WhatsApp) ===== -->
+      <div id="tabMessages" class="tab-panel hidden">
+        <div class="panel-head">
+          <div>
+            <h2 data-i18n="messagesHeading">Mensajes por WhatsApp</h2>
+            <p class="panel-sub" data-i18n="messagesHeadingSub">Cada envío abre WhatsApp con un chat real y el mensaje ya escrito — un clic por clienta, no hay envío masivo automático.</p>
+          </div>
+        </div>
+
+        <div class="msg-layout">
+          <div class="card msg-compose">
+            <h3 data-i18n="audienceLabel">Audiencia</h3>
+            <div class="audience-grid" id="audienceGrid">
+              <button class="audience-opt active" data-audience="all">
+                <span class="audience-name" data-i18n="audAll">Todas las clientas</span>
+                <span class="audience-count" id="audCountAll">–</span>
+              </button>
+              <button class="audience-opt" data-audience="upcoming">
+                <span class="audience-name" data-i18n="audUpcoming">Con cita próxima</span>
+                <span class="audience-count" id="audCountUpcoming">–</span>
+              </button>
+              <button class="audience-opt" data-audience="lapsed">
+                <span class="audience-name" data-i18n="audLapsed">Inactivas 30+ días</span>
+                <span class="audience-count" id="audCountLapsed">–</span>
+              </button>
+              <button class="audience-opt" data-audience="nearReward">
+                <span class="audience-name" data-i18n="audNearReward">Cerca de su premio</span>
+                <span class="audience-count" id="audCountNearReward">–</span>
+              </button>
             </div>
-            <div class="cal-grid" id="calGrid"></div>
-            <button id="calTodayBtn" class="ghost small cal-today-btn">Hoy</button>
-          </div>
-        </aside>
 
-        <div class="main-col">
-          <div class="toolbar">
-            <input type="search" id="searchInput" placeholder="Buscar por nombre o teléfono…" class="search-input" />
-            <div class="filters" id="statusFilters">
-              <button class="filter active" data-status="upcoming">Próximas</button>
-              <button class="filter" data-status="done">Completadas</button>
-              <button class="filter" data-status="cancelled">Canceladas</button>
-              <button class="filter" data-status="all">Todas</button>
-            </div>
-            <button id="refreshBtn" class="ghost">Actualizar</button>
+            <h3 style="margin-top:20px;" data-i18n="templatesLabel">Plantillas rápidas</h3>
+            <div class="tmpl-row" id="templateRow"></div>
+
+            <h3 style="margin-top:20px;" data-i18n="messageLabel">Mensaje</h3>
+            <textarea id="msgDraft" class="msg-textarea"></textarea>
+            <p class="hint" data-i18n="nameHint">Usa {nombre} — se reemplaza por el nombre real de cada clienta.</p>
           </div>
 
-          <div id="selectedDateBanner" class="selected-date-banner hidden">
-            <span id="selectedDateText"></span>
-            <button id="clearDateBtn" class="ghost small">Ver todas</button>
+          <div class="card msg-recipients">
+            <h3 id="recipientsHeading" data-i18n="recipientsLabel">Destinatarias</h3>
+            <div id="recipientsList" class="recipients-list"></div>
           </div>
-
-          <p id="dashError" class="error hidden"></p>
-          <p id="loadingMsg" class="muted hidden">Cargando…</p>
-          <p id="emptyMsg" class="muted hidden">No hay citas en esta vista.</p>
-
-          <div id="apptList"></div>
         </div>
       </div>
     </section>
   </main>
 
+  <!-- Discount add/edit sheet -->
+  <div id="discountModal" class="modal-overlay hidden">
+    <div class="modal">
+      <h2 id="discountModalTitle" data-i18n="newDiscount">+ Nuevo descuento</h2>
+      <form id="discountForm">
+        <div class="form-row">
+          <label><span data-i18n="codeLabel">Código</span><input type="text" id="dCode" required autocapitalize="characters" /></label>
+          <label class="w-sm"><span data-i18n="pctLabel">% Desc.</span><input type="number" id="dPct" min="1" max="100" required /></label>
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="titleEsLabel">Título (Español)</span><input type="text" id="dTitleEs" required /></label>
+          <label><span data-i18n="titleEnLabel">Título (English)</span><input type="text" id="dTitleEn" required /></label>
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="subEsLabel">Descripción (Español)</span><input type="text" id="dSubEs" required /></label>
+          <label><span data-i18n="subEnLabel">Descripción (English)</span><input type="text" id="dSubEn" required /></label>
+        </div>
+        <div class="form-row">
+          <label><span data-i18n="expiresLabel">Vence (opcional)</span><input type="date" id="dExpires" /></label>
+          <label class="w-sm"><span data-i18n="themeLabel">Color</span>
+            <select id="dTheme">
+              <option value="rose">Rose</option>
+              <option value="mauve">Mauve</option>
+              <option value="gold">Gold</option>
+              <option value="plum">Plum</option>
+            </select>
+          </label>
+        </div>
+        <label class="checkbox-row"><input type="checkbox" id="dActive" checked /><span data-i18n="activeLabel">Activo</span></label>
+        <p id="discountFormError" class="error hidden"></p>
+        <div class="modal-actions">
+          <button type="button" id="deleteDiscountBtn" class="ghost danger-ghost hidden" data-i18n="delete">Eliminar</button>
+          <div class="modal-actions-right">
+            <button type="button" id="cancelDiscountBtn" class="ghost" data-i18n="cancelBtn">Cancelar</button>
+            <button type="submit" data-i18n="saveBtn">Guardar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="config.js?v=5"></script>
-  <script src="app.js?v=5"></script>
+  <script src="config.js?v=6"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
