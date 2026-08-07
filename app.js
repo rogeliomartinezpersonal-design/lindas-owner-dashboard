@@ -1,26 +1,27 @@
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Mirrors lib/content.ts's SERVICES/ADDONS Spanish names. Duplicated rather than imported since
-// this is a standalone static site with no build step — if a service/add-on is added or renamed
-// in the app, update it here too.
-const SERVICE_NAMES = {
-  classicmani: 'Manicure Clásico',
-  gel: 'Manicure en Gel',
-  spamani: 'Manicure Spa',
-  fillin: 'Relleno de Acrílico',
-  fullacrylic: 'Set Completo Acrílico',
-  gelx: 'Set Completo Gel-X',
-  classicped: 'Pedicura Clásica',
-  pedspa: 'Pedicura Spa',
-  nailart: 'Nail Art Personalizado',
+// Mirrors lib/content.ts's SERVICES/ADDONS (Spanish names + prices). Duplicated rather than
+// imported since this is a standalone static site with no build step — if a service/add-on is
+// added, renamed, or repriced in the app, update it here too.
+const SERVICES = {
+  classicmani: { name: 'Manicure Clásico', price: 25 },
+  gel: { name: 'Manicure en Gel', price: 35 },
+  spamani: { name: 'Manicure Spa', price: 45 },
+  fillin: { name: 'Relleno de Acrílico', price: 40 },
+  fullacrylic: { name: 'Set Completo Acrílico', price: 55 },
+  gelx: { name: 'Set Completo Gel-X', price: 65 },
+  classicped: { name: 'Pedicura Clásica', price: 35 },
+  pedspa: { name: 'Pedicura Spa', price: 50 },
+  nailart: { name: 'Nail Art Personalizado', price: 85 },
 };
-const ADDON_NAMES = {
-  french: 'Diseño Francés',
-  stones: 'Piedras / Cristales',
-  colorchange: 'Cambio de Color',
-  repair: 'Reparación de Uña',
+const ADDONS = {
+  french: { name: 'Diseño Francés', price: 10 },
+  stones: { name: 'Piedras / Cristales', price: 8 },
+  colorchange: { name: 'Cambio de Color', price: 20 },
+  repair: { name: 'Reparación de Uña', price: 8 },
 };
 const DOW = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const DOW_SHORT = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const STATUS_LABEL = { upcoming: 'Próxima', done: 'Completada', cancelled: 'Cancelada' };
 
 const el = (id) => document.getElementById(id);
@@ -30,6 +31,10 @@ const dashView = el('dashView');
 const logoutBtn = el('logoutBtn');
 
 let currentFilter = 'upcoming';
+let selectedDate = null; // 'YYYY-MM-DD' or null
+let calendarMonth = new Date();
+calendarMonth.setDate(1);
+let lastLoadedAppointments = [];
 
 function showOnly(view) {
   for (const v of [authView, claimView, dashView]) v.classList.add('hidden');
@@ -44,6 +49,23 @@ function showError(elId, message) {
 }
 function clearError(elId) {
   el(elId).classList.add('hidden');
+}
+
+function dateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function apptTotal(a) {
+  const base = SERVICES[a.service_id]?.price ?? 0;
+  const addons = (a.addon_ids ?? []).reduce((sum, id) => sum + (ADDONS[id]?.price ?? 0), 0);
+  return base + addons;
+}
+
+function waLink(phone) {
+  const digits = (phone || '').replace(/\D/g, '');
+  if (!digits) return null;
+  const withCountry = digits.length === 10 ? '1' + digits : digits;
+  return `https://wa.me/${withCountry}`;
 }
 
 // ---------- Auth tabs ----------
@@ -106,8 +128,10 @@ el('claimForm').addEventListener('submit', async (e) => {
   await routeCurrentSession();
 });
 
-// ---------- Dashboard ----------
+// ---------- Dashboard controls ----------
 el('refreshBtn').addEventListener('click', loadAppointments);
+el('searchInput').addEventListener('input', () => renderAppointments(lastLoadedAppointments));
+
 document.querySelectorAll('#statusFilters .filter').forEach((btn) => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('#statusFilters .filter').forEach((b) => b.classList.remove('active'));
@@ -117,8 +141,38 @@ document.querySelectorAll('#statusFilters .filter').forEach((btn) => {
   });
 });
 
-let lastLoadedAppointments = [];
+el('clearDateBtn').addEventListener('click', () => {
+  selectedDate = null;
+  renderCalendar();
+  updateSelectedDateBanner();
+  renderAppointments(lastLoadedAppointments);
+});
 
+el('calPrev').addEventListener('click', () => {
+  calendarMonth.setMonth(calendarMonth.getMonth() - 1);
+  renderCalendar();
+});
+el('calNext').addEventListener('click', () => {
+  calendarMonth.setMonth(calendarMonth.getMonth() + 1);
+  renderCalendar();
+});
+el('calTodayBtn').addEventListener('click', () => {
+  calendarMonth = new Date();
+  calendarMonth.setDate(1);
+  renderCalendar();
+});
+
+function updateSelectedDateBanner() {
+  const banner = el('selectedDateBanner');
+  if (selectedDate) {
+    el('selectedDateText').textContent = 'Mostrando: ' + formatDateHeading(selectedDate);
+    banner.classList.remove('hidden');
+  } else {
+    banner.classList.add('hidden');
+  }
+}
+
+// ---------- Data loading ----------
 async function loadAppointments() {
   el('dashError').classList.add('hidden');
   el('emptyMsg').classList.add('hidden');
@@ -146,11 +200,99 @@ async function loadAppointments() {
   }
 
   lastLoadedAppointments = (appts ?? []).map((a) => ({ ...a, customer: profileById[a.user_id] }));
+  renderStats(lastLoadedAppointments);
+  renderCalendar();
   renderAppointments(lastLoadedAppointments);
 }
 
+// ---------- Stats ----------
+function renderStats(appts) {
+  const todayKey = dateKey(new Date());
+  const weekEnd = new Date();
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  const weekEndKey = dateKey(weekEnd);
+  const monthPrefix = todayKey.slice(0, 7);
+
+  const todayCount = appts.filter((a) => a.status === 'upcoming' && a.appt_date === todayKey).length;
+  const weekCount = appts.filter((a) => a.status === 'upcoming' && a.appt_date >= todayKey && a.appt_date <= weekEndKey).length;
+  const monthRevenue = appts
+    .filter((a) => a.status === 'done' && a.appt_date.startsWith(monthPrefix))
+    .reduce((sum, a) => sum + apptTotal(a), 0);
+  const customerCount = new Set(appts.map((a) => a.user_id)).size;
+
+  el('statToday').textContent = todayCount;
+  el('statWeek').textContent = weekCount;
+  el('statRevenue').textContent = '$' + monthRevenue;
+  el('statCustomers').textContent = customerCount;
+}
+
+// ---------- Calendar ----------
+function renderCalendar() {
+  const grid = el('calGrid');
+  grid.innerHTML = '';
+
+  const year = calendarMonth.getFullYear();
+  const month = calendarMonth.getMonth();
+  const monthLabel = calendarMonth.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+  el('calMonthLabel').textContent = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+
+  for (const d of DOW_SHORT) {
+    const cell = document.createElement('div');
+    cell.className = 'cal-dow';
+    cell.textContent = d;
+    grid.appendChild(cell);
+  }
+
+  const countsByDate = {};
+  for (const a of lastLoadedAppointments) {
+    if (a.status === 'cancelled') continue;
+    countsByDate[a.appt_date] = (countsByDate[a.appt_date] || 0) + 1;
+  }
+
+  const todayKey = dateKey(new Date());
+  const startOffset = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  for (let i = 0; i < startOffset; i++) {
+    const blank = document.createElement('div');
+    blank.className = 'cal-day empty';
+    grid.appendChild(blank);
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const count = countsByDate[key];
+
+    const cell = document.createElement('button');
+    cell.type = 'button';
+    cell.className = 'cal-day';
+    if (key === todayKey) cell.classList.add('today');
+    if (key === selectedDate) cell.classList.add('selected');
+    cell.innerHTML = `${day}${count ? `<span class="cal-dot">${count > 9 ? '9+' : count}</span>` : ''}`;
+    cell.addEventListener('click', () => {
+      selectedDate = selectedDate === key ? null : key;
+      renderCalendar();
+      updateSelectedDateBanner();
+      renderAppointments(lastLoadedAppointments);
+    });
+    grid.appendChild(cell);
+  }
+}
+
+// ---------- Appointment list ----------
 function renderAppointments(appts) {
-  const filtered = currentFilter === 'all' ? appts : appts.filter((a) => a.status === currentFilter);
+  let filtered = currentFilter === 'all' ? appts : appts.filter((a) => a.status === currentFilter);
+  if (selectedDate) filtered = filtered.filter((a) => a.appt_date === selectedDate);
+
+  const q = el('searchInput').value.trim().toLowerCase();
+  if (q) {
+    filtered = filtered.filter((a) => {
+      const name = (a.customer?.username || '').toLowerCase();
+      const phone = (a.customer?.phone || '').toLowerCase();
+      return name.includes(q) || phone.includes(q);
+    });
+  }
+
   const list = el('apptList');
   list.innerHTML = '';
 
@@ -180,8 +322,8 @@ function renderAppointments(appts) {
   }
 }
 
-function formatDateHeading(dateKey) {
-  const [y, m, d] = dateKey.split('-').map(Number);
+function formatDateHeading(dateKeyStr) {
+  const [y, m, d] = dateKeyStr.split('-').map(Number);
   const date = new Date(y, m - 1, d);
   return `${DOW[date.getDay()]} ${d}/${m}/${y}`;
 }
@@ -190,15 +332,21 @@ function renderApptCard(a) {
   const card = document.createElement('div');
   card.className = 'appt-card';
 
-  const addonNames = (a.addon_ids ?? []).map((id) => ADDON_NAMES[id] ?? id).join(', ');
+  const addonNames = (a.addon_ids ?? []).map((id) => ADDONS[id]?.name ?? id).join(', ');
   const customerName = a.customer?.username ?? '—';
-  const customerPhone = a.customer?.phone ?? '—';
+  const customerPhone = a.customer?.phone ?? '';
+  const wa = waLink(customerPhone);
+  const total = apptTotal(a);
+  const serviceName = SERVICES[a.service_id]?.name ?? a.service_id;
 
   card.innerHTML = `
     <div class="appt-time">${a.appt_time}</div>
     <div class="appt-main">
-      <div class="appt-service">${SERVICE_NAMES[a.service_id] ?? a.service_id}</div>
-      <div class="appt-customer">${customerName} · ${customerPhone}</div>
+      <div class="appt-service">${serviceName} · $${total}</div>
+      <div class="appt-customer">
+        <span>${customerName}${customerPhone ? ' · ' + customerPhone : ''}</span>
+        ${wa ? `<a href="${wa}" target="_blank" rel="noopener" class="wa-link" title="Enviar WhatsApp">💬</a>` : ''}
+      </div>
       ${addonNames ? `<div class="appt-addons">+ ${addonNames}</div>` : ''}
     </div>
     <div class="appt-actions">

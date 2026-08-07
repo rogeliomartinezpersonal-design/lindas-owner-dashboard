@@ -4,17 +4,27 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Linda's Nail Studio — Panel</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%92%85%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header class="topbar">
-    <h1>Linda's Nail Studio</h1>
+    <div class="brand">
+      <span class="brand-mark">💅</span>
+      <div>
+        <h1>Linda's Nail Studio</h1>
+        <span class="brand-sub">Panel de propietaria</span>
+      </div>
+    </div>
     <button id="logoutBtn" class="ghost hidden">Cerrar sesión</button>
   </header>
 
   <main id="app">
     <!-- Login / sign up -->
-    <section id="authView" class="card hidden">
+    <section id="authView" class="card auth-card hidden">
       <div class="tabs">
         <button id="tabLogin" class="tab active">Iniciar sesión</button>
         <button id="tabSignup" class="tab">Crear cuenta</button>
@@ -51,21 +61,62 @@
 
     <!-- Main dashboard, shown once is_owner is confirmed -->
     <section id="dashView" class="hidden">
-      <div class="toolbar">
-        <div class="filters" id="statusFilters">
-          <button class="filter active" data-status="upcoming">Próximas</button>
-          <button class="filter" data-status="done">Completadas</button>
-          <button class="filter" data-status="cancelled">Canceladas</button>
-          <button class="filter" data-status="all">Todas</button>
+      <div class="stats-row" id="statsRow">
+        <div class="stat-tile">
+          <span class="stat-value" id="statToday">–</span>
+          <span class="stat-label">Citas hoy</span>
         </div>
-        <button id="refreshBtn" class="ghost">Actualizar</button>
+        <div class="stat-tile">
+          <span class="stat-value" id="statWeek">–</span>
+          <span class="stat-label">Esta semana</span>
+        </div>
+        <div class="stat-tile">
+          <span class="stat-value" id="statRevenue">–</span>
+          <span class="stat-label">Ingresos del mes</span>
+        </div>
+        <div class="stat-tile">
+          <span class="stat-value" id="statCustomers">–</span>
+          <span class="stat-label">Clientas</span>
+        </div>
       </div>
 
-      <p id="dashError" class="error hidden"></p>
-      <p id="loadingMsg" class="muted hidden">Cargando…</p>
-      <p id="emptyMsg" class="muted hidden">No hay citas en esta vista.</p>
+      <div class="dash-layout">
+        <aside class="sidebar">
+          <div class="calendar-card">
+            <div class="cal-header">
+              <button id="calPrev" class="icon-btn" aria-label="Mes anterior">‹</button>
+              <span id="calMonthLabel" class="cal-month-label"></span>
+              <button id="calNext" class="icon-btn" aria-label="Mes siguiente">›</button>
+            </div>
+            <div class="cal-grid" id="calGrid"></div>
+            <button id="calTodayBtn" class="ghost small cal-today-btn">Hoy</button>
+          </div>
+        </aside>
 
-      <div id="apptList"></div>
+        <div class="main-col">
+          <div class="toolbar">
+            <input type="search" id="searchInput" placeholder="Buscar por nombre o teléfono…" class="search-input" />
+            <div class="filters" id="statusFilters">
+              <button class="filter active" data-status="upcoming">Próximas</button>
+              <button class="filter" data-status="done">Completadas</button>
+              <button class="filter" data-status="cancelled">Canceladas</button>
+              <button class="filter" data-status="all">Todas</button>
+            </div>
+            <button id="refreshBtn" class="ghost">Actualizar</button>
+          </div>
+
+          <div id="selectedDateBanner" class="selected-date-banner hidden">
+            <span id="selectedDateText"></span>
+            <button id="clearDateBtn" class="ghost small">Ver todas</button>
+          </div>
+
+          <p id="dashError" class="error hidden"></p>
+          <p id="loadingMsg" class="muted hidden">Cargando…</p>
+          <p id="emptyMsg" class="muted hidden">No hay citas en esta vista.</p>
+
+          <div id="apptList"></div>
+        </div>
+      </div>
     </section>
   </main>
 
