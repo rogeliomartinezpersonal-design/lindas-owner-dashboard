@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Linda's Nail Studio — Panel</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Linda's Nail Studio</h1>
+    <button id="logoutBtn" class="ghost hidden">Cerrar sesión</button>
+  </header>
+
+  <main id="app">
+    <!-- Login / sign up -->
+    <section id="authView" class="card hidden">
+      <div class="tabs">
+        <button id="tabLogin" class="tab active">Iniciar sesión</button>
+        <button id="tabSignup" class="tab">Crear cuenta</button>
+      </div>
+
+      <form id="loginForm">
+        <label>Correo<input type="email" id="loginEmail" required autocomplete="email" /></label>
+        <label>Contraseña<input type="password" id="loginPassword" required autocomplete="current-password" /></label>
+        <button type="submit">Entrar</button>
+        <p id="loginError" class="error hidden"></p>
+      </form>
+
+      <form id="signupForm" class="hidden">
+        <label>Tu nombre<input type="text" id="signupName" required /></label>
+        <label>Tu teléfono<input type="tel" id="signupPhone" required /></label>
+        <label>Correo<input type="email" id="signupEmail" required autocomplete="email" /></label>
+        <label>Contraseña<input type="password" id="signupPassword" required autocomplete="new-password" minlength="6" /></label>
+        <button type="submit">Crear cuenta</button>
+        <p id="signupError" class="error hidden"></p>
+      </form>
+    </section>
+
+    <!-- Shown once logged in but not yet flagged as the owner -->
+    <section id="claimView" class="card hidden">
+      <h2>Acceso de propietaria</h2>
+      <p>Esta cuenta todavía no tiene acceso de propietaria. Ingresa el código de configuración
+        (te lo dio quien instaló este panel) para activarlo una sola vez.</p>
+      <form id="claimForm">
+        <label>Código<input type="text" id="claimCode" required autocomplete="off" /></label>
+        <button type="submit">Activar acceso</button>
+        <p id="claimError" class="error hidden"></p>
+      </form>
+    </section>
+
+    <!-- Main dashboard, shown once is_owner is confirmed -->
+    <section id="dashView" class="hidden">
+      <div class="toolbar">
+        <div class="filters" id="statusFilters">
+          <button class="filter active" data-status="upcoming">Próximas</button>
+          <button class="filter" data-status="done">Completadas</button>
+          <button class="filter" data-status="cancelled">Canceladas</button>
+          <button class="filter" data-status="all">Todas</button>
+        </div>
+        <button id="refreshBtn" class="ghost">Actualizar</button>
+      </div>
+
+      <p id="dashError" class="error hidden"></p>
+      <p id="loadingMsg" class="muted hidden">Cargando…</p>
+      <p id="emptyMsg" class="muted hidden">No hay citas en esta vista.</p>
+
+      <div id="apptList"></div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
