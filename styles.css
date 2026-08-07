@@ -25,22 +25,30 @@ body {
 h1, h2 { font-family: 'Playfair Display', Georgia, serif; margin: 0; }
 
 .topbar {
-  position: relative;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   padding: 12px 28px;
   min-height: 56px;
   border-bottom: 1px solid var(--line);
   background: #fff;
 }
-.brand {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-logo { height: 38px; width: auto; display: block; }
+.brand-text { display: flex; flex-direction: column; gap: 1px; }
+.topbar h1 {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: var(--rose-dark);
 }
-.brand-logo { height: 34px; width: auto; display: block; }
+.brand-sub {
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-weight: 600;
+}
 
 #app {
   max-width: 1080px;
