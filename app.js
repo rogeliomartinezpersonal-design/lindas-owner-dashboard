@@ -1,4 +1,4 @@
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Mirrors lib/content.ts's SERVICES/ADDONS Spanish names. Duplicated rather than imported since
 // this is a standalone static site with no build step — if a service/add-on is added or renamed
@@ -65,7 +65,7 @@ el('loginForm').addEventListener('submit', async (e) => {
   clearError('loginError');
   const email = el('loginEmail').value.trim();
   const password = el('loginPassword').value;
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
   if (error) showError('loginError', 'No se pudo iniciar sesión: ' + error.message);
 });
 
@@ -77,7 +77,7 @@ el('signupForm').addEventListener('submit', async (e) => {
   const name = el('signupName').value.trim();
   const phone = el('signupPhone').value.trim();
 
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabaseClient.auth.signUp({ email, password });
   if (error) return showError('signupError', error.message);
   if (!data.user) return showError('signupError', 'No se pudo crear la cuenta.');
   if (!data.session) {
@@ -87,20 +87,20 @@ el('signupForm').addEventListener('submit', async (e) => {
     );
   }
 
-  const { error: profileError } = await supabase
+  const { error: profileError } = await supabaseClient
     .from('profiles')
     .insert({ id: data.user.id, phone, username: name });
   if (profileError) return showError('signupError', profileError.message);
 });
 
-logoutBtn.addEventListener('click', () => supabase.auth.signOut());
+logoutBtn.addEventListener('click', () => supabaseClient.auth.signOut());
 
 // ---------- Owner claim ----------
 el('claimForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   clearError('claimError');
   const code = el('claimCode').value.trim();
-  const { data, error } = await supabase.rpc('claim_owner', { p_secret: code });
+  const { data, error } = await supabaseClient.rpc('claim_owner', { p_secret: code });
   if (error) return showError('claimError', error.message);
   if (!data) return showError('claimError', 'Código incorrecto.');
   await routeCurrentSession();
@@ -125,7 +125,7 @@ async function loadAppointments() {
   el('loadingMsg').classList.remove('hidden');
   el('apptList').innerHTML = '';
 
-  const { data: appts, error } = await supabase
+  const { data: appts, error } = await supabaseClient
     .from('appointments')
     .select('id, status, service_id, addon_ids, appt_date, appt_time, user_id')
     .order('appt_date', { ascending: true })
@@ -141,7 +141,7 @@ async function loadAppointments() {
   const userIds = [...new Set((appts ?? []).map((a) => a.user_id))];
   let profileById = {};
   if (userIds.length > 0) {
-    const { data: profiles } = await supabase.from('profiles').select('id, username, phone').in('id', userIds);
+    const { data: profiles } = await supabaseClient.from('profiles').select('id, username, phone').in('id', userIds);
     profileById = Object.fromEntries((profiles ?? []).map((p) => [p.id, p]));
   }
 
@@ -226,7 +226,7 @@ function renderApptCard(a) {
 }
 
 async function updateStatus(id, status) {
-  const { error } = await supabase.from('appointments').update({ status }).eq('id', id);
+  const { error } = await supabaseClient.from('appointments').update({ status }).eq('id', id);
   if (error) {
     showError('dashError', 'No se pudo actualizar: ' + error.message);
     return;
@@ -236,7 +236,7 @@ async function updateStatus(id, status) {
 
 // ---------- Routing based on session/owner status ----------
 async function routeCurrentSession() {
-  const { data: sessionData } = await supabase.auth.getSession();
+  const { data: sessionData } = await supabaseClient.auth.getSession();
   const session = sessionData.session;
 
   if (!session) {
@@ -244,7 +244,7 @@ async function routeCurrentSession() {
     return;
   }
 
-  const { data: profile, error } = await supabase
+  const { data: profile, error } = await supabaseClient
     .from('profiles')
     .select('is_owner')
     .eq('id', session.user.id)
@@ -259,5 +259,5 @@ async function routeCurrentSession() {
   await loadAppointments();
 }
 
-supabase.auth.onAuthStateChange(() => routeCurrentSession());
+supabaseClient.auth.onAuthStateChange(() => routeCurrentSession());
 routeCurrentSession();
