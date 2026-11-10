@@ -118,6 +118,15 @@ function serviceName(id) { return SERVICES[id]?.[LANG] ?? id; }
 function addonName(id) { return ADDONS[id]?.[LANG] ?? id; }
 function locale() { return LANG === 'es' ? 'es-MX' : 'en-US'; }
 
+// Every value below can originate from a customer-controlled row (profiles.username,
+// appointments.service_id/addon_ids) with no server-side format constraint — never interpolate
+// any of it into innerHTML without escaping first, even values that "look" safe today.
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+
 const el = (id) => document.getElementById(id);
 const authView = el('authView');
 const claimView = el('claimView');
@@ -448,7 +457,7 @@ function renderServicesChart() {
     .map(
       ([id, count]) => `
     <div class="rank-row">
-      <span class="rank-label">${serviceName(id)}</span>
+      <span class="rank-label">${escapeHtml(serviceName(id))}</span>
       <div class="rank-bar-track"><div class="rank-bar-fill" style="width:${(count / max) * 100}%"></div></div>
       <span class="rank-value">${count}</span>
     </div>`
@@ -562,16 +571,16 @@ function renderApptCard(a) {
   const card = document.createElement('div');
   card.className = 'appt-card';
 
-  const addonNames = (a.addon_ids ?? []).map((id) => addonName(id)).join(', ');
-  const customerName = a.customer?.username ?? '—';
-  const customerPhone = a.customer?.phone ?? '';
-  const wa = waLink(customerPhone);
+  const addonNames = escapeHtml((a.addon_ids ?? []).map((id) => addonName(id)).join(', '));
+  const customerName = escapeHtml(a.customer?.username ?? '—');
+  const customerPhone = escapeHtml(a.customer?.phone ?? '');
+  const wa = waLink(a.customer?.phone ?? '');
   const total = apptTotal(a);
 
   card.innerHTML = `
-    <div class="appt-time">${a.appt_time}</div>
+    <div class="appt-time">${escapeHtml(a.appt_time)}</div>
     <div class="appt-main">
-      <div class="appt-service">${serviceName(a.service_id)} · $${total}</div>
+      <div class="appt-service">${escapeHtml(serviceName(a.service_id))} · $${total}</div>
       <div class="appt-customer">
         <span>${customerName}${customerPhone ? ' · ' + customerPhone : ''}</span>
         ${wa ? `<a href="${wa}" target="_blank" rel="noopener" class="wa-link" title="WhatsApp">💬</a>` : ''}
@@ -579,7 +588,7 @@ function renderApptCard(a) {
       ${addonNames ? `<div class="appt-addons">+ ${addonNames}</div>` : ''}
     </div>
     <div class="appt-actions">
-      <span class="status-pill status-${a.status}">${STATUS_LABEL[LANG][a.status]}</span>
+      <span class="status-pill status-${escapeHtml(a.status)}">${escapeHtml(STATUS_LABEL[LANG][a.status])}</span>
     </div>
   `;
 
@@ -621,14 +630,14 @@ function renderDiscounts() {
     card.className = 'discount-card' + (d.active ? '' : ' inactive');
     const colors = THEME_COLORS[d.theme] ?? THEME_COLORS.rose;
     card.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
-    const title = LANG === 'es' ? d.title_es : d.title_en;
-    const sub = LANG === 'es' ? d.sub_es : d.sub_en;
+    const title = escapeHtml(LANG === 'es' ? d.title_es : d.title_en);
+    const sub = escapeHtml(LANG === 'es' ? d.sub_es : d.sub_en);
     card.innerHTML = `
       <div class="discount-pct">${d.pct}% OFF</div>
       <div class="discount-title">${title}</div>
       <div class="discount-sub">${sub}</div>
       <div class="discount-foot">
-        <span class="discount-code">${d.code}</span>
+        <span class="discount-code">${escapeHtml(d.code)}</span>
         <span class="discount-exp">${formatExpiry(d.expires_at)}</span>
       </div>
     `;
@@ -801,10 +810,10 @@ function renderRecipients() {
     row.className = 'recipient-row';
     row.innerHTML = `
       <div class="recipient-info">
-        <div class="recipient-name">${s.name}</div>
-        <div class="recipient-meta">${s.phone}</div>
+        <div class="recipient-name">${escapeHtml(s.name)}</div>
+        <div class="recipient-meta">${escapeHtml(s.phone)}</div>
       </div>
-      ${link ? `<a class="recipient-send" href="${link}?text=${encodeURIComponent(personalized)}" target="_blank" rel="noopener">💬 ${t('sendBtn')}</a>` : ''}
+      ${link ? `<a class="recipient-send" href="${link}?text=${encodeURIComponent(personalized)}" target="_blank" rel="noopener">💬 ${escapeHtml(t('sendBtn'))}</a>` : ''}
     `;
     list.appendChild(row);
   }
