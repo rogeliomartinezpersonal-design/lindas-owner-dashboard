@@ -3,12 +3,12 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 // ---------- i18n ----------
 const STRINGS = {
   es: {
-    brandSub: 'Panel de propietaria', logout: 'Cerrar sesión',
+    brandSub: 'Panel del salón', logout: 'Cerrar sesión',
     tabLogin: 'Iniciar sesión', tabSignup: 'Crear cuenta',
     emailLabel: 'Correo', passwordLabel: 'Contraseña', enterBtn: 'Entrar',
     nameLabel: 'Tu nombre', phoneLabel: 'Tu teléfono',
     claimTitle: 'Acceso de propietaria',
-    claimBody: 'Esta cuenta todavía no tiene acceso de propietaria. Ingresa el código de configuración (te lo dio quien instaló este panel) para activarlo una sola vez.',
+    claimBody: 'Esta cuenta todavía no tiene acceso al panel. Ingresa tu código de un solo uso: el código de configuración de propietaria, o el código de invitación que te dio la propietaria.',
     codeLabel: 'Código', claimBtn: 'Activar acceso',
     tabOverview: 'Resumen', tabDiscounts: 'Descuentos', tabMessages: 'Mensajes',
     statToday: 'Citas hoy', statWeek: 'Esta semana', statRevenue: 'Ingresos del mes', statCustomers: 'Clientas',
@@ -32,12 +32,12 @@ const STRINGS = {
     recipientsLabel: 'Destinatarias', noRecipients: 'Nadie en esta audiencia todavía.', sendBtn: 'Enviar',
   },
   en: {
-    brandSub: "Owner's panel", logout: 'Log out',
+    brandSub: 'Salon dashboard', logout: 'Log out',
     tabLogin: 'Log in', tabSignup: 'Create account',
     emailLabel: 'Email', passwordLabel: 'Password', enterBtn: 'Enter',
     nameLabel: 'Your name', phoneLabel: 'Your phone',
     claimTitle: 'Owner access',
-    claimBody: "This account doesn't have owner access yet. Enter the setup code (whoever installed this panel gave it to you) to activate it, once.",
+    claimBody: "This account doesn't have dashboard access yet. Enter your one-time code: the owner setup code, or the staff invite code the owner gave you.",
     codeLabel: 'Code', claimBtn: 'Activate access',
     tabOverview: 'Overview', tabDiscounts: 'Discounts', tabMessages: 'Messages',
     statToday: "Today's appts", statWeek: 'This week', statRevenue: "Month's revenue", statCustomers: 'Customers',
@@ -112,7 +112,7 @@ const TEMPLATES = {
 };
 const DOW = { es: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'], en: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] };
 const DOW_SHORT = { es: ['D', 'L', 'M', 'M', 'J', 'V', 'S'], en: ['S', 'M', 'T', 'W', 'T', 'F', 'S'] };
-const STATUS_LABEL = { es: { upcoming: 'Próxima', done: 'Completada', cancelled: 'Cancelada' }, en: { upcoming: 'Upcoming', done: 'Completed', cancelled: 'Cancelled' } };
+const STATUS_LABEL = { es: { upcoming: 'Próxima', done: 'Completada', cancelled: 'Cancelada', no_show: 'No asistió' }, en: { upcoming: 'Upcoming', done: 'Completed', cancelled: 'Cancelled', no_show: 'No-show' } };
 
 function serviceName(id) { return SERVICES[id]?.[LANG] ?? id; }
 function addonName(id) { return ADDONS[id]?.[LANG] ?? id; }
@@ -165,9 +165,17 @@ function dateKey(d) {
 }
 
 function apptTotal(a) {
+  // price_cents is the price snapshot taken at booking (salon-admin schema); older rows and the
+  // pre-migration schema fall back to the static price list above.
+  if (a.price_cents !== undefined && a.price_cents !== null) return Math.round(a.price_cents / 100);
   const base = SERVICES[a.service_id]?.price ?? 0;
   const addons = (a.addon_ids ?? []).reduce((sum, id) => sum + (ADDONS[id]?.price ?? 0), 0);
   return base + addons;
+}
+
+function clockMinutes(t) {
+  const m = /^(\d{1,2}):(\d{2}) (AM|PM)$/.exec(t || '');
+  return m ? ((Number(m[1]) % 12) + (m[3] === 'PM' ? 12 : 0)) * 60 + Number(m[2]) : 0;
 }
 
 function waLink(phone) {
@@ -201,6 +209,8 @@ function refreshAllUI() {
   renderAudienceCounts();
   renderRecipients();
   updateSelectedDateBanner();
+  // Salon admin sections (docs/admin/*.js) follow the same toggle.
+  if (typeof refreshAdminLanguage === 'function') refreshAdminLanguage();
 }
 
 // ---------- Auth tabs ----------
@@ -254,22 +264,21 @@ el('claimForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   clearError('claimError');
   const code = el('claimCode').value.trim();
+  // One box for both kinds of one-time code: the owner setup code, or a staff invite code that
+  // the owner generated in Team & permissions.
   const { data, error } = await supabaseClient.rpc('claim_owner', { p_secret: code });
   if (error) return showError('claimError', error.message);
-  if (!data) return showError('claimError', 'Incorrect code.');
+  if (!data) {
+    const { data: staffOk, error: staffError } = await supabaseClient.rpc('claim_staff_invite', { p_code: code });
+    if (staffError && staffError.code !== 'PGRST202') return showError('claimError', staffError.message);
+    if (!staffOk) return showError('claimError', LANG === 'es' ? 'Código incorrecto o vencido.' : 'Incorrect or expired code.');
+  }
   await routeCurrentSession();
 });
 
-// ---------- Dashboard tabs ----------
-document.querySelectorAll('#dashTabs .dtab').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('#dashTabs .dtab').forEach((b) => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.querySelectorAll('.tab-panel').forEach((p) => p.classList.add('hidden'));
-    const targetId = 'tab' + btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1);
-    el(targetId).classList.remove('hidden');
-  });
-});
+// ---------- Dashboard sections ----------
+// Navigation between sections (including Overview/Discounts/Messages below) is built per role by
+// docs/admin/core.js (buildNav/showSection).
 
 // ---------- Overview controls ----------
 el('refreshBtn').addEventListener('click', loadAppointments);
@@ -322,9 +331,11 @@ async function loadAppointments() {
   el('loadingMsg').classList.remove('hidden');
   el('apptList').innerHTML = '';
 
+  // select('*') works both before and after the salon-admin migration (which adds client_id,
+  // price_cents, etc.); naming new columns explicitly would break the pre-migration schema.
   const { data: appts, error } = await supabaseClient
     .from('appointments')
-    .select('id, status, service_id, addon_ids, appt_date, appt_time, user_id')
+    .select('*')
     .order('appt_date', { ascending: true })
     .order('appt_time', { ascending: true });
 
@@ -335,14 +346,27 @@ async function loadAppointments() {
     return;
   }
 
-  const userIds = [...new Set((appts ?? []).map((a) => a.user_id))];
+  // Walk-in appointments (booked from the Agenda) have no app account: user_id is null and the
+  // person lives in clients instead.
+  const userIds = [...new Set((appts ?? []).map((a) => a.user_id).filter(Boolean))];
+  const clientIds = [...new Set((appts ?? []).filter((a) => !a.user_id && a.client_id).map((a) => a.client_id))];
   let profileById = {};
+  let clientById = {};
   if (userIds.length > 0) {
     const { data: profiles } = await supabaseClient.from('profiles').select('id, username, phone').in('id', userIds);
     profileById = Object.fromEntries((profiles ?? []).map((p) => [p.id, p]));
   }
+  if (clientIds.length > 0) {
+    const { data: clients } = await supabaseClient.from('clients').select('id, full_name, phone').in('id', clientIds);
+    clientById = Object.fromEntries((clients ?? []).map((c) => [c.id, { username: c.full_name, phone: c.phone }]));
+  }
 
-  lastLoadedAppointments = (appts ?? []).map((a) => ({ ...a, customer: profileById[a.user_id] }));
+  lastLoadedAppointments = (appts ?? [])
+    .filter((a) => !a.is_demo)
+    .map((a) => ({ ...a, customer: profileById[a.user_id] ?? clientById[a.client_id] }))
+    // appt_time is text ("1:00 PM"); the database orders it alphabetically (9 AM after 3 PM), so
+    // re-sort by real clock time within each day.
+    .sort((x, y) => x.appt_date.localeCompare(y.appt_date) || clockMinutes(x.appt_time) - clockMinutes(y.appt_time));
   renderStats(lastLoadedAppointments);
   renderCalendar();
   renderAppointments(lastLoadedAppointments);
@@ -383,7 +407,7 @@ function renderStats(appts) {
   const monthRevenue = appts
     .filter((a) => a.status === 'done' && a.appt_date.startsWith(monthPrefix))
     .reduce((sum, a) => sum + apptTotal(a), 0);
-  const customerCount = new Set(appts.map((a) => a.user_id)).size;
+  const customerCount = new Set(appts.map((a) => a.client_id || a.user_id).filter(Boolean)).size;
 
   el('statToday').textContent = todayCount;
   el('statWeek').textContent = weekCount;
@@ -829,20 +853,37 @@ async function routeCurrentSession() {
     return;
   }
 
-  const { data: profile, error } = await supabaseClient
-    .from('profiles')
-    .select('is_owner')
-    .eq('id', session.user.id)
-    .single();
+  // my_access() (supabase/migrations/20261109100000_admin_core_agenda.sql) returns the caller's
+  // staff role: owner, reception, employee, or null for a customer account. If the database
+  // hasn't been migrated yet, fall back to the original owner-only check so the live dashboard
+  // keeps working exactly as before.
+  let access = null;
+  let legacyOnly = false;
+  const { data: accessData, error: accessError } = await supabaseClient.rpc('my_access');
+  if (!accessError) {
+    access = accessData?.role ? accessData : null;
+  } else {
+    const { data: profile } = await supabaseClient.from('profiles').select('is_owner').eq('id', session.user.id).single();
+    if (profile?.is_owner) access = { role: 'owner' };
+    legacyOnly = true;
+  }
 
-  if (error || !profile?.is_owner) {
+  if (!access) {
     showOnly(claimView);
     return;
   }
 
   showOnly(dashView);
-  await Promise.all([loadAppointments(), loadCustomers(), loadDiscounts()]);
-  renderTemplates();
+  if (legacyOnly) {
+    for (const id of Object.keys(Admin.modules)) delete Admin.modules[id];
+    LEGACY.overview.group = null; LEGACY.discounts.group = null; LEGACY.messages.group = null;
+    NAV_ORDER.unshift('overview');
+  }
+  await startAdmin(access);
+  if (access.role === 'owner') {
+    await Promise.all([loadAppointments(), loadCustomers(), loadDiscounts()]);
+    renderTemplates();
+  }
 }
 
 applyTranslations();

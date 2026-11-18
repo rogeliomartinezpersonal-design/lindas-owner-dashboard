@@ -8,7 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=6" />
+  <link rel="stylesheet" href="styles.css?v=8" />
+  <link rel="stylesheet" href="admin/admin.css?v=8" />
 </head>
 <body>
   <header class="topbar">
@@ -16,7 +17,7 @@
       <img src="logo.png?v=1" alt="" class="brand-logo" />
       <div class="brand-text">
         <h1>Linda's Nail Studio</h1>
-        <span class="brand-sub" data-i18n="brandSub">Panel de propietaria</span>
+        <span class="brand-sub" data-i18n="brandSub">Panel del salón</span>
       </div>
     </div>
     <div class="topbar-actions">
@@ -65,16 +66,18 @@
       </form>
     </section>
 
-    <!-- Main dashboard, shown once is_owner is confirmed -->
+    <!-- Main dashboard, shown once a staff role (owner / reception / employee) is confirmed -->
     <section id="dashView" class="hidden">
-      <div class="dtabs-nav" id="dashTabs">
-        <button class="dtab active" data-tab="overview" data-i18n="tabOverview">Resumen</button>
-        <button class="dtab" data-tab="discounts" data-i18n="tabDiscounts">Descuentos</button>
-        <button class="dtab" data-tab="messages" data-i18n="tabMessages">Mensajes</button>
+      <div class="admin-shell">
+      <nav class="admin-nav" id="adminNav" aria-label="Dashboard sections"></nav>
+      <div class="admin-main">
+      <div class="admin-topline">
+        <select id="adminNavSelect" class="admin-nav-select" aria-label="Dashboard section"></select>
+        <span id="roleBadge" class="role-badge"></span>
       </div>
 
       <!-- ===== Overview ===== -->
-      <div id="tabOverview" class="tab-panel">
+      <div id="tabOverview" class="tab-panel hidden">
         <div class="stats-row" id="statsRow">
           <div class="stat-tile">
             <span class="stat-value" id="statToday">–</span>
@@ -202,6 +205,11 @@
           </div>
         </div>
       </div>
+
+      <!-- Salon admin sections (docs/admin/*.js) render their panels here -->
+      <div id="adminPanels"></div>
+      </div>
+      </div>
     </section>
   </main>
 
@@ -247,7 +255,22 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="config.js?v=6"></script>
-  <script src="app.js?v=6"></script>
+  <script src="config.js?v=8"></script>
+  <script src="admin/core.js?v=8"></script>
+  <script src="admin/home.js?v=8"></script>
+  <script src="admin/agenda.js?v=8"></script>
+  <script src="admin/clients.js?v=8"></script>
+  <script src="admin/team.js?v=8"></script>
+  <script src="admin/services.js?v=8"></script>
+  <script src="admin/sales.js?v=8"></script>
+  <script src="admin/inventory.js?v=8"></script>
+  <script src="admin/purchasing.js?v=8"></script>
+  <script src="admin/commissions.js?v=8"></script>
+  <script src="admin/finance.js?v=8"></script>
+  <script src="admin/shop.js?v=8"></script>
+  <script src="admin/care.js?v=8"></script>
+  <script src="admin/reports.js?v=8"></script>
+  <script src="admin/settings.js?v=8"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>
